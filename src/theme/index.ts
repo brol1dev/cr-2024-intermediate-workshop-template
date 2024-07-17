@@ -1,3 +1,4 @@
+import type { StyleProp } from "react-native";
 import { colors as colorsLight } from "./colors"
 import { colors as colorsDark } from "./colorsDark"
 import { spacing as spacingLight } from "./spacing"
@@ -39,3 +40,40 @@ export interface Theme {
     typography,
     timing,
   };
+
+  /**
+ * Represents a function that returns a styled component based on the provided theme.
+ * @template T The type of the style.
+ * @param theme The theme object.
+ * @returns The styled component.
+ *
+ * @example
+ * const $container: ThemedStyle<ViewStyle> = (theme) => ({
+ *   flex: 1,
+ *   backgroundColor: theme.colors.background,
+ *   justifyContent: "center",
+ *   alignItems: "center",
+ * })
+ * // Then use in a component like so:
+ * const Component = () => {
+ *   const { themed } = useAppTheme()
+ *   return <View style={themed($container)} />
+ * }
+ */
+export type ThemedStyle<T> = (theme: Theme) => T;
+export type ThemedStyleArray<T> = (
+  | ThemedStyle<T>
+  | StyleProp<T>
+  | (StyleProp<T> | ThemedStyle<T>)[]
+)[];
+
+// Export the two Theme objects:
+export {
+    colorsLight as colors,
+    colorsDark,
+    spacingLight as spacing,
+    spacingDark,
+    typography,
+  };
+  
+  export { customFontsToLoad } from "./typography";
