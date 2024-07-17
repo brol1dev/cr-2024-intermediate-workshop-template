@@ -1,10 +1,13 @@
-  // app/_layout.tsx
+// app/_layout.tsx
 import React from "react"
-import { KeyboardProvider } from "react-native-keyboard-controller";
+import { KeyboardProvider } from "react-native-keyboard-controller"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { Slot, SplashScreen } from "expo-router"
 import { useInitialRootStore } from "src/models"
 import { useFonts } from "@expo-google-fonts/space-grotesk"
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
 import { customFontsToLoad } from "src/theme"
+import { ViewStyle } from "react-native"
 
 SplashScreen.preventAutoHideAsync()
 
@@ -41,8 +44,16 @@ export default function Root() {
   }
 
   return (
-    <KeyboardProvider>
-      <Slot />
-    </KeyboardProvider>
+    <GestureHandlerRootView style={$root}>
+      <KeyboardProvider>
+        <BottomSheetModalProvider>
+          <Slot />
+        </BottomSheetModalProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
   )
+}
+
+const $root: ViewStyle = {
+  flex: 1,
 }
