@@ -22,7 +22,7 @@ export default observer(function Layout() {
       {
         title: "Update your profile",
         subtitle: "Keep your deets up-to-date!",
-        icon: Platform.OS === "android" ? "profile_icon" : "contact",
+        icon: Platform.OS === "android" ? "profile_icon" : "symbol:person",
         id: "0",
         params: { href: "/(app)/(tabs)/profile" },
       },
