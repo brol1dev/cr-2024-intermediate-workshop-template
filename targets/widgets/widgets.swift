@@ -3,47 +3,68 @@ import SwiftUI
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), emoji: "😀")
+        SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), emoji: "😀")
+        let entry = SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
         completion(entry)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        var entries: [SimpleEntry] = []
+        // Notice the App Group is used here
+        let userDefaults = UserDefaults(suiteName: "group.cr2024im.data")
+        // And the key for the data that we use in the MST store.
+        let episodesJsonString = userDefaults?.string(forKey: "episodes") ?? "[]"
 
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, emoji: "😀")
-            entries.append(entry)
+        let decoded: [EpisodeFromStore] = try! JSONDecoder().decode([EpisodeFromStore].self, from: Data(episodesJsonString.utf8))
+
+        let firstEpisode = decoded.first
+
+        if (firstEpisode != nil) {
+            // pass the data to the widget
+            let entry = SimpleEntry(date: Date(), title: firstEpisode?.title ?? "", imageData: nil, episodeCount: decoded.count, guid: firstEpisode?.guid)
+
+            // Some other stuff to make the widget update...
+            let timeline = Timeline(entries: [entry], policy: .atEnd)
+            completion(timeline)
+        } else {
+            // pass the data to the widget
+            let entry = SimpleEntry(date: Date(), title: "", imageData: nil, episodeCount: 0, guid: nil)
+
+            // Some other stuff to make the widget update...
+            let timeline = Timeline(entries: [entry], policy: .atEnd)
+            completion(timeline)
         }
-
-        let timeline = Timeline(entries: entries, policy: .atEnd)
-        completion(timeline)
     }
 }
 
 struct SimpleEntry: TimelineEntry {
-    let date: Date
-    let emoji: String
+  let date: Date
+  let title: String
+  var imageData: UIImage?
+  let episodeCount: Int
+  let guid: String?
+}
+
+struct EpisodeFromStore: Codable {
+  let guid: String
+  let title: String
+  let thumbnail: String
 }
 
 struct FavoriteEpisodeWidgetEntryView : View {
-    var entry: Provider.Entry
+  var entry: Provider.Entry
 
-    var body: some View {
-        VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
-
-            Text("Emoji:")
-            Text(entry.emoji)
-        }
+  var body: some View {
+    VStack {
+      if (entry.episodeCount == 0) {
+        Text("No favorite episodes yet!")
+      } else {
+        Text(entry.title)
+      }
     }
+  }
 }
 
 struct FavoriteEpisodeWidget: Widget {
@@ -68,6 +89,5 @@ struct FavoriteEpisodeWidget: Widget {
 #Preview(as: .systemSmall) {
     FavoriteEpisodeWidget()
 } timeline: {
-    SimpleEntry(date: .now, emoji: "😀")
-    SimpleEntry(date: .now, emoji: "🤩")
+    SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
 }
