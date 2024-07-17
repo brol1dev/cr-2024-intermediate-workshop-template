@@ -263,6 +263,7 @@ export function Screen(props: ScreenProps) {
         keyboardVerticalOffset={keyboardOffset}
         {...KeyboardAvoidingViewProps}
         style={[$keyboardAvoidingViewStyle, KeyboardAvoidingViewProps?.style]}
+        enabled={isNonScrolling(props.preset)}
       >
         {isNonScrolling(props.preset) ? (
           <ScreenWithoutScrolling {...props} />
