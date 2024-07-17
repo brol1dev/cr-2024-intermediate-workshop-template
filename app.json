@@ -96,5 +96,8 @@
   },
   "ignite": {
     "version": "9.6.2"
+  },
+  "entitlements": {
+    "com.apple.security.application-groups": ["group.cr2024im.data"]
   }
 }
