@@ -22,14 +22,14 @@ export default observer(function Layout() {
       {
         title: "Update your profile",
         subtitle: "Keep your deets up-to-date!",
-        icon: Platform.OS === "android" ? undefined : "contact", // we'll come back to the Android icon
+        icon: Platform.OS === "android" ? "profile_icon" : "contact",
         id: "0",
         params: { href: "/(app)/(tabs)/profile" },
       },
       {
         title: "Check out the latest podcast",
         subtitle: "What's everyone saying on RN Radio?",
-        icon: Platform.OS === "android" ? undefined : "play",
+        icon: Platform.OS === "android" ? "podcast_icon" : "play",
         id: "1",
         params: { href: "/(app)/(tabs)/podcasts/latest" },
       },
