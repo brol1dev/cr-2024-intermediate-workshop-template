@@ -1,42 +1,76 @@
 import WidgetKit
 import SwiftUI
 
+// just an error definition in case a fetch fails
+enum FetcherError: Error {
+  case imageDataCorrupted
+}
+
+// It turns out that those thumbnails are really high-res, and Swift will get mad if you don't shrink them. This makes that easier.
+extension UIImage {
+  func resized(toWidth width: CGFloat, isOpaque: Bool = true) -> UIImage? {
+    let canvas = CGSize(width: width, height: CGFloat(ceil(width/size.width * size.height)))
+    let format = imageRendererFormat
+    format.opaque = isOpaque
+    return UIGraphicsImageRenderer(size: canvas, format: format).image {
+      _ in draw(in: CGRect(origin: .zero, size: canvas))
+    }
+  }
+}
+
 struct Provider: TimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
-    }
-
-    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
-        completion(entry)
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        // Notice the App Group is used here
-        let userDefaults = UserDefaults(suiteName: "group.cr2024im.data")
-        // And the key for the data that we use in the MST store.
-        let episodesJsonString = userDefaults?.string(forKey: "episodes") ?? "[]"
-
-        let decoded: [EpisodeFromStore] = try! JSONDecoder().decode([EpisodeFromStore].self, from: Data(episodesJsonString.utf8))
-
-        let firstEpisode = decoded.first
-
-        if (firstEpisode != nil) {
-            // pass the data to the widget
-            let entry = SimpleEntry(date: Date(), title: firstEpisode?.title ?? "", imageData: nil, episodeCount: decoded.count, guid: firstEpisode?.guid)
-
-            // Some other stuff to make the widget update...
-            let timeline = Timeline(entries: [entry], policy: .atEnd)
-            completion(timeline)
-        } else {
-            // pass the data to the widget
-            let entry = SimpleEntry(date: Date(), title: "", imageData: nil, episodeCount: 0, guid: nil)
-
-            // Some other stuff to make the widget update...
-            let timeline = Timeline(entries: [entry], policy: .atEnd)
-            completion(timeline)
+  func placeholder(in context: Context) -> SimpleEntry {
+    SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
+  }
+  
+  func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
+    let entry = SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
+    completion(entry)
+  }
+  
+  func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+    Task {
+      // Notice the App Group is used here
+      let userDefaults = UserDefaults(suiteName: "group.cr2024im.data")
+      // And the key for the data that we use in the MST store.
+      let episodesJsonString = userDefaults?.string(forKey: "episodes") ?? "[]"
+      
+      let decoded: [EpisodeFromStore] = try! JSONDecoder().decode([EpisodeFromStore].self, from: Data(episodesJsonString.utf8))
+      
+      let firstEpisode = decoded.first
+      
+      if (firstEpisode != nil) {
+        guard let image = try? await fetchImage(url: firstEpisode?.thumbnail ?? "") else {
+          return
         }
+        
+        // pass the data to the widget
+        let entry = SimpleEntry(date: Date(), title: firstEpisode?.title ?? "", imageData: image.resized(toWidth: 500), episodeCount: decoded.count, guid: firstEpisode?.guid)
+        
+        // Some other stuff to make the widget update...
+        let timeline = Timeline(entries: [entry], policy: .atEnd)
+        completion(timeline)
+      } else {
+        // pass the data to the widget
+        let entry = SimpleEntry(date: Date(), title: "", imageData: nil, episodeCount: 0, guid: nil)
+        
+        // Some other stuff to make the widget update...
+        let timeline = Timeline(entries: [entry], policy: .atEnd)
+        completion(timeline)
+      }
     }
+  }
+  
+  func fetchImage(url: String) async throws -> UIImage {
+    // Download image from URL
+    let (imageData, _) = try await URLSession.shared.data(from: URL(string: url)!)
+    
+    guard let image = UIImage(data: imageData) else {
+      throw FetcherError.imageDataCorrupted
+    }
+    
+    return image
+  }
 }
 
 struct SimpleEntry: TimelineEntry {
@@ -53,41 +87,124 @@ struct EpisodeFromStore: Codable {
   let thumbnail: String
 }
 
-struct FavoriteEpisodeWidgetEntryView : View {
+struct WidgetSmallView : View {
   var entry: Provider.Entry
-
+  
   var body: some View {
     VStack {
       if (entry.episodeCount == 0) {
         Text("No favorite episodes yet!")
       } else {
-        Text(entry.title)
+        ZStack {
+          HStack {
+            if (entry.imageData !== nil) {
+              Image(uiImage: entry.imageData!)
+                .resizable()
+                .scaledToFill()
+                .cornerRadius(10)
+            }
+          }
+          if (entry.episodeCount > 1) {
+            VStack {
+              HStack {
+                Spacer()
+                ZStack {
+                  Circle().fill(Color.red)
+                    .padding(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
+                  Text("+\((entry.episodeCount - 1).description)")
+                }.frame(width: 60, height: 60)
+              }
+              Spacer()
+            }
+          }
+        }
       }
     }
   }
 }
 
-struct FavoriteEpisodeWidget: Widget {
-    let kind: String = "FavoriteEpisodeWidget"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            if #available(iOS 17.0, *) {
-                FavoriteEpisodeWidgetEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                FavoriteEpisodeWidgetEntryView(entry: entry)
-                    .padding()
-                    .background()
+struct WidgetMediumView : View {
+  var entry: Provider.Entry
+  
+  var body: some View {
+    VStack {
+      if (entry.episodeCount == 0) {
+        Text("No favorite episodes yet!")
+      } else {
+        ZStack {
+          HStack {
+            if (entry.imageData !== nil) {
+              GeometryReader { geo in
+                //You now have access to geo.size.width and geo.size.height
+                
+                Image(uiImage: entry.imageData!)
+                  .resizable()
+                  .scaledToFill()
+                  .frame(width: geo.size.height, height: geo.size.height)
+              }
             }
+            Text(entry.title)
+              .padding(EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10))
+          }
+          if (entry.episodeCount > 1) {
+            VStack {
+              HStack {
+                ZStack {
+                  Circle().fill(Color(red: 213 / 255, green: 70 / 255, blue: 63 / 255, opacity: 1))
+                    .padding(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
+                  Text("+\((entry.episodeCount - 1).description)")
+                }.frame(width: 60, height: 60)
+                Spacer()
+              }
+              Spacer()
+            }
+          }
         }
-        .configurationDisplayName("My Widget")
-        .description("This is an example widget.")
+      }
     }
+  }
+}
+
+struct FavoriteEpisodeWidgetEntryView : View {
+  var entry: Provider.Entry
+  
+  @Environment(\.widgetFamily) var family: WidgetFamily
+  @ViewBuilder
+  var body: some View {
+    switch family {
+    case .systemSmall:
+      WidgetSmallView(entry: entry)
+    case .systemMedium:
+      WidgetMediumView(entry: entry)
+    default:
+      EmptyView()
+    }
+  }
+}
+
+struct FavoriteEpisodeWidget: Widget {
+  let kind: String = "FavoriteEpisodeWidget"
+  
+  var body: some WidgetConfiguration {
+    StaticConfiguration(kind: kind, provider: Provider()) { entry in
+      if #available(iOS 17.0, *) {
+        FavoriteEpisodeWidgetEntryView(entry: entry)
+          .containerBackground(.fill.tertiary, for: .widget)
+      } else {
+        FavoriteEpisodeWidgetEntryView(entry: entry)
+          .padding()
+          .background()
+      }
+    }
+    .configurationDisplayName("My Widget")
+    .description("This is an example widget.")
+    .supportedFamilies([.systemSmall, .systemMedium]) // limits the available sizes
+    .contentMarginsDisabled() // gets rid of the margin
+  }
 }
 
 #Preview(as: .systemSmall) {
-    FavoriteEpisodeWidget()
+  FavoriteEpisodeWidget()
 } timeline: {
-    SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
+  SimpleEntry(date: Date(), title: "RNR 1: The First One", imageData: nil, episodeCount: 1, guid: nil)
 }
