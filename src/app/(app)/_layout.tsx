@@ -1,15 +1,17 @@
 import React from "react"
-import { Platform } from "react-native"
+import { AppState, Platform } from "react-native"
 import * as QuickActions from "expo-quick-actions"
 import { useQuickActionRouting, RouterAction } from "expo-quick-actions/router"
 import { Redirect, Stack } from "expo-router"
 import { observer } from "mobx-react-lite"
 import { useStores } from "src/models"
 import { useThemeProvider } from "src/utils/useAppTheme"
+import { updateEpisodesWidget } from "../../widgets/widget-refresher"
 
 export default observer(function Layout() {
   const {
     authenticationStore: { isAuthenticated },
+    episodeStore,
     profileStore: {
       profile: { darkMode },
     },
@@ -34,6 +36,18 @@ export default observer(function Layout() {
         params: { href: "/(app)/(tabs)/podcasts/latest" },
       },
     ])
+  }, [])
+
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener("change", (appState) => {
+      if (appState === "active") {
+        updateEpisodesWidget(episodeStore.favorites.slice())
+      }
+    })
+
+    return () => {
+      subscription.remove()
+    }
   }, [])
 
   const { themeScheme, setThemeContextOverride, ThemeProvider } = useThemeProvider(
