@@ -1,5 +1,6 @@
-// app/_layout.tsx
+  // app/_layout.tsx
 import React from "react"
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { Slot, SplashScreen } from "expo-router"
 import { useInitialRootStore } from "src/models"
 import { useFonts } from "@expo-google-fonts/space-grotesk"
@@ -39,5 +40,9 @@ export default function Root() {
     return null
   }
 
-  return <Slot />
+  return (
+    <KeyboardProvider>
+      <Slot />
+    </KeyboardProvider>
+  )
 }
