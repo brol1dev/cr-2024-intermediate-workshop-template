@@ -26,6 +26,13 @@ export default observer(function Layout() {
         id: "0",
         params: { href: "/(app)/(tabs)/profile" },
       },
+      {
+        title: "Check out the latest podcast",
+        subtitle: "What's everyone saying on RN Radio?",
+        icon: Platform.OS === "android" ? undefined : "play",
+        id: "1",
+        params: { href: "/(app)/(tabs)/podcasts/latest" },
+      },
     ])
   }, [])
 
